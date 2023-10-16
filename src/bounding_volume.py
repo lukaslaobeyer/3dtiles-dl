@@ -31,25 +31,21 @@ class Sphere:
         self.center = np.array(center)
         self.r = r
 
-    def test(self, other):
-        """Returns true when `other` contains this Sphere's `center`, or when this Sphere
-        completely contains `other`"""
-
-        if not isinstance(other, OrientedBoundingBox):
-            raise TypeError("unsupported type")
-
-        P0, P1, P2, P3 =\
-            other.vertices[0], other.vertices[1], other.vertices[3], other.vertices[4]
-        u = P1 - P0
-        v = P2 - P0
-        w = P3 - P0
-
-        is_center_inside_box = (
-            u.dot(P0) <= u.dot(self.center) <= u.dot(P1) and
-            v.dot(P0) <= v.dot(self.center) <= v.dot(P2) and
-            w.dot(P0) <= w.dot(self.center) <= w.dot(P3)
+    @staticmethod
+    def from_obb(obb):
+        return Sphere(
+            0.5 * (obb.vertices[0] + obb.vertices[6]),
+            0.5 * np.linalg.norm(obb.vertices[6] - obb.vertices[0])
         )
 
-        return is_center_inside_box or (
-            np.linalg.norm((other.vertices - self.center), axis=-1) < self.r
-        ).all()
+    def intersects(self, other):
+        """Sphere intersection test. WARNING: If other is an OBB, then the OBB is first
+        approximated using a sphere."""
+
+        if isinstance(other, OrientedBoundingBox):
+            return self.intersects(Sphere.from_obb(other))
+
+        if not isinstance(other, Sphere):
+            raise TypeError("unsupported type")
+
+        return np.linalg.norm(other.center - self.center) < self.r + other.r

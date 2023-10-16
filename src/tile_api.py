@@ -11,7 +11,7 @@ def _parse(root, target_volume):
     if "children" in root:
         for child in root["children"]:
             bv = OrientedBoundingBox.from_tilespec(child["boundingVolume"])
-            if target_volume.test(bv):
+            if target_volume.intersects(bv):
                 yield from _parse(child, target_volume)
     elif "content" in root:
         yield root["content"]
