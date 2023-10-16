@@ -6,7 +6,24 @@ import argparse
 from pathlib import Path
 import sys
 
+import requests
 from tqdm import tqdm
+
+
+def _get_elevation(lon, lat, key):
+    res = requests.get(
+        f"https://maps.googleapis.com/maps/api/elevation/json",
+        params={
+            "locations": f"{lat},{lon}",
+            "key": key
+        }
+    )
+    if not res.ok:
+        raise RuntimeError(f"response not ok: {response.status_code}, {response.text}")
+    data = res.json()
+    if not data["status"] == "OK" or "results" not in data:
+        raise RuntimeError(f"status not ok: {data['status']}, {data}")
+    return data["results"][0]["elevation"]
 
 
 if __name__ == "__main__":
@@ -31,10 +48,13 @@ if __name__ == "__main__":
         print("Must provide two coordinates: -c <longitude> <latitude>")
         sys.exit(-1)
 
+    print("Querying elevation...")
+    elevation = _get_elevation(*args.coords, args.api_key)
+
     api = TileApi(key=args.api_key)
     print("Traversing tile hierarchy...")
     tiles = list(tqdm(api.get(Sphere(
-        cartesian_from_degrees(*args.coords),
+        cartesian_from_degrees(*args.coords, elevation),
         args.radius
     ))))
 
